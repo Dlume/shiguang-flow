@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useAppStore } from '../store/useStore'
 import { encryptData, decryptData } from '../utils/crypto'
+import { Database, Download, Upload, Copy, Eye, EyeOff, Sparkles, Shield } from 'lucide-react'
 
-// 生成随机密码（16 位，包含大小写字母、数字、特殊字符）
 function generatePassword(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*'
   const array = new Uint8Array(16)
@@ -20,22 +20,26 @@ export default function DataManager() {
   const handleGeneratePassword = () => {
     const newPwd = generatePassword()
     setPassword(newPwd)
-    setStatus('🔑 已生成新密码，请妥善保存')
+    setStatus('🔑 已生成新密码')
+    setTimeout(() => setStatus(''), 3000)
   }
 
   const handleCopyPassword = async () => {
     if (!password) return
     try {
       await navigator.clipboard.writeText(password)
-      setStatus('📋 密码已复制到剪贴板')
+      setStatus('📋 已复制')
+      setTimeout(() => setStatus(''), 2000)
     } catch {
-      setStatus('❌ 复制失败，请手动复制')
+      setStatus('❌ 复制失败')
+      setTimeout(() => setStatus(''), 2000)
     }
   }
 
   const handleExport = async () => {
     if (!password.trim()) {
-      setStatus('⚠️ 请生成或输入加密密码')
+      setStatus('⚠️ 请先生成密码')
+      setTimeout(() => setStatus(''), 2000)
       return
     }
     try {
@@ -50,9 +54,11 @@ export default function DataManager() {
       a.download = `shiguang_backup_${new Date().toISOString().split('T')[0]}.sgx`
       a.click()
       URL.revokeObjectURL(url)
-      setStatus('✅ 导出成功，请妥善保管密码和备份文件')
+      setStatus('✅ 导出成功')
+      setTimeout(() => setStatus(''), 3000)
     } catch (e) {
       setStatus('❌ 导出失败')
+      setTimeout(() => setStatus(''), 3000)
       console.error(e)
     }
   }
@@ -61,110 +67,142 @@ export default function DataManager() {
     const file = e.target.files?.[0]
     if (!file || !password.trim()) {
       setStatus('⚠️ 请选择文件并输入密码')
+      setTimeout(() => setStatus(''), 2000)
       return
     }
     try {
-      setStatus('🔄 解密导入中...')
+      setStatus('🔄 解密中...')
       const text = await file.text()
       const decrypted = await decryptData(text, password)
       const imported = JSON.parse(decrypted)
       
       if (Array.isArray(imported)) {
-        // 简单合并逻辑：去重后保存
         const existingIds = new Set(notes.map((n) => n.id))
         const newNotes = imported.filter((n: any) => !existingIds.has(n.id))
         const merged = [...newNotes, ...notes]
-        // 更新 store (需直接操作 IndexedDB)
         const { set } = await import('idb-keyval')
         await set('shiGuang_notes', merged)
         await loadNotes()
-        setStatus(`✅ 导入成功，新增 ${newNotes.length} 条记录`)
+        setStatus(`✅ 导入 ${newNotes.length} 条`)
+        setTimeout(() => setStatus(''), 3000)
       } else {
-        setStatus('❌ 数据格式无效')
+        setStatus('❌ 格式无效')
+        setTimeout(() => setStatus(''), 2000)
       }
-    } catch (e: any) {
-      setStatus(`❌ ${e.message || '导入失败'}`)
-      console.error(e)
+    } catch (err: any) {
+      setStatus('❌ 密码错误')
+      setTimeout(() => setStatus(''), 3000)
+      console.error(err)
     }
   }
 
   return (
-    <div className="bg-white rounded-lg p-6 shadow-sm border border-stone-100">
-      <h2 className="text-lg font-medium text-stone-700 mb-4">数据管理</h2>
+    <div className="bg-[var(--bg-secondary)] rounded-2xl shadow-[var(--shadow-md)] border border-[var(--border)] overflow-hidden">
+      <div className="relative h-1 bg-gradient-to-r from-blue-400 to-indigo-500" />
       
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm text-stone-600 mb-2">加密密码</label>
+      <div className="p-4 sm:p-5 space-y-4">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-xl bg-[var(--bg-tertiary)] flex items-center justify-center">
+            <Database className="w-4 h-4 text-[var(--accent)]" />
+          </div>
+          <h2 className="text-base font-medium text-[var(--text-primary)]">数据管理</h2>
+        </div>
+
+        {/* 密码区域 */}
+        <div className="p-4 bg-[var(--bg-tertiary)] rounded-xl space-y-3">
+          <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+            <Shield className="w-4 h-4" />
+            <span>加密保护</span>
+          </div>
+          
           <div className="flex gap-2">
             <div className="flex-1 relative">
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="点击生成或手动输入"
-                className="w-full px-4 py-2 pr-20 rounded-lg border border-stone-200 bg-stone-50 text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-300 font-mono text-sm"
+                placeholder="生成或输入密码"
+                className="w-full px-4 py-2.5 pr-20 rounded-xl bg-white border border-[var(--border)] text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/20 focus:border-[var(--accent)] transition-all text-sm font-mono"
               />
-              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="px-2 py-1 text-xs text-stone-500 hover:text-stone-700 transition-colors"
-                  title={showPassword ? '隐藏密码' : '显示密码'}
-                >
-                  {showPassword ? '🙈' : '👁️'}
-                </button>
+              <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex gap-1">
                 {password && (
                   <button
-                    type="button"
                     onClick={handleCopyPassword}
-                    className="px-2 py-1 text-xs text-stone-500 hover:text-stone-700 transition-colors"
-                    title="复制密码"
+                    className="p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
+                    title="复制"
                   >
-                    📋
+                    <Copy className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
                   </button>
                 )}
+                <button
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
+                  title={showPassword ? '隐藏' : '显示'}
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
+                  ) : (
+                    <Eye className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
+                  )}
+                </button>
               </div>
             </div>
             <button
-              type="button"
               onClick={handleGeneratePassword}
-              className="px-4 py-2 bg-stone-200 text-stone-700 rounded-lg hover:bg-stone-300 transition-colors text-sm font-medium whitespace-nowrap"
+              className="px-4 py-2.5 bg-[var(--accent)] text-white text-sm font-medium rounded-xl hover:shadow-md active:scale-[0.98] transition-all flex items-center gap-1.5"
             >
-              🔑 生成密码
+              <Sparkles className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">生成</span>
             </button>
           </div>
-          <p className="text-xs text-stone-400 mt-1">
-            密码仅保存在本地，导出后请妥善保管。建议复制保存至密码管理器。
-          </p>
+          
+          <div className="text-xs text-[var(--text-tertiary)] leading-relaxed">
+            密码仅保存在本地，导出后请妥善保管。建议使用密码管理器保存。
+          </div>
         </div>
 
-        <div className="flex gap-3">
+        {/* 操作按钮 */}
+        <div className="grid grid-cols-2 gap-3">
           <button
             onClick={handleExport}
             disabled={!password.trim()}
-            className="flex-1 px-4 py-2 bg-stone-700 text-white rounded-lg hover:bg-stone-800 disabled:opacity-40 transition-colors text-sm"
+            className="group relative px-4 py-3 bg-[var(--accent)] text-white text-sm font-medium rounded-xl overflow-hidden transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-md active:scale-[0.98]"
           >
-            导出备份
+            <div className="flex items-center justify-center gap-2">
+              <Download className="w-4 h-4" />
+              <span>导出</span>
+            </div>
           </button>
-          <label className="flex-1 px-4 py-2 bg-stone-200 text-stone-700 rounded-lg hover:bg-stone-300 cursor-pointer text-center text-sm transition-colors">
-            导入恢复
+          
+          <label className="group relative px-4 py-3 bg-[var(--bg-tertiary)] text-[var(--text-primary)] text-sm font-medium rounded-xl overflow-hidden transition-all hover:shadow-md active:scale-[0.98] cursor-pointer">
+            <div className="flex items-center justify-center gap-2">
+              <Upload className="w-4 h-4" />
+              <span>导入</span>
+            </div>
             <input type="file" accept=".sgx" onChange={handleImport} className="hidden" />
           </label>
         </div>
 
+        {/* 状态提示 */}
         {status && (
-          <div className={`text-sm mt-2 p-3 rounded-lg ${
+          <div className={`px-4 py-3 rounded-xl text-sm font-medium animate-slide-up ${
             status.startsWith('✅') ? 'bg-green-50 text-green-700' :
             status.startsWith('❌') || status.startsWith('⚠️') ? 'bg-red-50 text-red-700' :
-            'bg-stone-50 text-stone-600'
+            'bg-[var(--bg-tertiary)] text-[var(--text-secondary)]'
           }`}>
             {status}
           </div>
         )}
-      </div>
 
-      <div className="mt-4 pt-4 border-t border-stone-100 text-xs text-stone-400">
-        数据采用 AES-GCM 加密。密码仅存在于您的设备，请勿遗忘。
+        {/* 安全提示 */}
+        <div className="pt-4 border-t border-[var(--border)]">
+          <div className="flex items-start gap-2.5">
+            <Shield className="w-4 h-4 text-[var(--text-tertiary)] mt-0.5 flex-shrink-0" />
+            <div className="text-xs text-[var(--text-tertiary)] leading-relaxed">
+              数据采用 AES-GCM 加密，密码仅存在于您的设备。请定期备份重要数据。
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )

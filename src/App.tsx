@@ -3,6 +3,7 @@ import { useAppStore } from './store/useStore'
 import NoteEditor from './components/NoteEditor'
 import WeeklySummary from './components/WeeklySummary'
 import DataManager from './components/DataManager'
+import { ChevronRight, Home, BarChart3, Database } from 'lucide-react'
 
 type Tab = 'record' | 'summary' | 'data'
 
@@ -31,7 +32,7 @@ function groupByWeek(notes: Note[]) {
 function groupByMonth(notes: Note[]) {
   const months = new Map<string, Note[]>()
   notes.forEach((note) => {
-    const monthKey = note.date.slice(0, 7) // YYYY-MM
+    const monthKey = note.date.slice(0, 7)
     if (!months.has(monthKey)) months.set(monthKey, [])
     months.get(monthKey)!.push(note)
   })
@@ -52,12 +53,6 @@ function App() {
     loadNotes()
   }, [loadNotes])
 
-  const tabs = [
-    { id: 'record' as Tab, label: '记录' },
-    { id: 'summary' as Tab, label: '回顾' },
-    { id: 'data' as Tab, label: '数据' },
-  ]
-
   const toggleWeek = (week: string) => {
     const next = new Set(expandedWeeks)
     next.has(week) ? next.delete(week) : next.add(week)
@@ -77,7 +72,11 @@ function App() {
     const date = new Date(weekStart)
     const end = new Date(date)
     end.setDate(date.getDate() + 6)
-    return `${date.getMonth() + 1}/${date.getDate()} - ${end.getMonth() + 1}/${end.getDate()}`
+    const startMonth = date.getMonth() + 1
+    const startDay = date.getDate()
+    const endMonth = end.getMonth() + 1
+    const endDay = end.getDate()
+    return `${startMonth}.${startDay} - ${endMonth}.${endDay}`
   }
 
   const formatMonthLabel = (month: string) => {
@@ -85,145 +84,240 @@ function App() {
     return `${year}年${parseInt(m)}月`
   }
 
+  const getWeekNumber = (weekStart: string) => {
+    const date = new Date(weekStart)
+    const startOfYear = new Date(date.getFullYear(), 0, 1)
+    const days = Math.floor((date.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000))
+    return Math.ceil((days + startOfYear.getDay() + 1) / 7)
+  }
+
   return (
-    <main className="max-w-2xl mx-auto px-4 py-8">
-      <header className="mb-8 text-center">
-        <div className="flex justify-center mb-3">
-          <img src="/logo.svg" alt="拾光·心流 Logo" className="w-16 h-16" />
-        </div>
-        <h1 className="text-2xl font-serif text-stone-800 mb-1">拾光·心流</h1>
-        {todayHexagram && (
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-stone-100 rounded-full mb-2">
-            <span className="text-lg font-serif text-stone-700">{todayHexagram.image}</span>
-            <span className="text-sm text-stone-600">
-              第 {todayHexagram.number} 卦 · {todayHexagram.name}
-            </span>
-            <span className="text-xs text-stone-400">|</span>
-            <span className="text-xs text-stone-500 italic">{todayHexagram.judgment}</span>
-          </div>
-        )}
-      </header>
-
-      {/* 标签导航 */}
-      <nav className="flex gap-2 mb-6 bg-stone-100 p-1 rounded-lg">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
-              activeTab === tab.id
-                ? 'bg-white text-stone-800 shadow-sm'
-                : 'text-stone-500 hover:text-stone-700'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </nav>
-
-      {/* 内容区域 */}
-      {activeTab === 'record' && (
-        <>
-          <NoteEditor />
-          
-          {/* 过往拾光 - 折叠展示 */}
-          {notes.length > 0 && (
-            <div className="bg-white rounded-lg p-6 shadow-sm border border-stone-100">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-medium text-stone-700">过往拾光</h2>
-                <div className="flex gap-1 bg-stone-100 rounded-lg p-1">
-                  <button
-                    onClick={() => setViewMode('week')}
-                    className={`px-3 py-1 text-xs rounded-md transition-colors ${
-                      viewMode === 'week'
-                        ? 'bg-white text-stone-800 shadow-sm'
-                        : 'text-stone-500 hover:text-stone-700'
-                    }`}
-                  >
-                    按周
-                  </button>
-                  <button
-                    onClick={() => setViewMode('month')}
-                    className={`px-3 py-1 text-xs rounded-md transition-colors ${
-                      viewMode === 'month'
-                        ? 'bg-white text-stone-800 shadow-sm'
-                        : 'text-stone-500 hover:text-stone-700'
-                    }`}
-                  >
-                    按月
-                  </button>
-                </div>
+    <div className="min-h-screen bg-[var(--bg-primary)] pb-20 sm:pb-8">
+      {/* 头部 - 极简设计 */}
+      <header className="sticky top-0 z-50 bg-[var(--bg-primary)]/80 backdrop-blur-lg border-b border-[var(--border)]">
+        <div className="max-w-2xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md">
+                <span className="text-white text-lg font-serif">流</span>
               </div>
-
-              <div className="space-y-3">
-                {viewMode === 'week' ? (
-                  weekNotes.map(([week, items]) => (
-                    <div key={week} className="border border-stone-100 rounded-lg overflow-hidden">
-                      <button
-                        onClick={() => toggleWeek(week)}
-                        className="w-full flex items-center justify-between px-4 py-3 bg-stone-50 hover:bg-stone-100 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className={`text-xs transition-transform ${expandedWeeks.has(week) ? 'rotate-90' : ''}`}>
-                            ▶
-                          </span>
-                          <span className="text-sm font-medium text-stone-700">
-                            第{new Date(week).getWeek ? new Date(week).getWeek() : Math.ceil(new Date(week).getDate() / 7)}周 · {formatWeekLabel(week)}
-                          </span>
-                        </div>
-                        <span className="text-xs text-stone-400">{items.length} 条记录</span>
-                      </button>
-                      {expandedWeeks.has(week) && (
-                        <div className="divide-y divide-stone-50">
-                          {items.map((note) => (
-                            <div key={note.id} className="px-4 py-3">
-                              <div className="text-xs text-stone-400 mb-1">{note.date}</div>
-                              <div className="text-stone-700 whitespace-pre-wrap text-sm">{note.content}</div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  monthNotes.map(([month, items]) => (
-                    <div key={month} className="border border-stone-100 rounded-lg overflow-hidden">
-                      <button
-                        onClick={() => toggleMonth(month)}
-                        className="w-full flex items-center justify-between px-4 py-3 bg-stone-50 hover:bg-stone-100 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className={`text-xs transition-transform ${expandedMonths.has(month) ? 'rotate-90' : ''}`}>
-                            ▶
-                          </span>
-                          <span className="text-sm font-medium text-stone-700">
-                            {formatMonthLabel(month)}
-                          </span>
-                        </div>
-                        <span className="text-xs text-stone-400">{items.length} 条记录</span>
-                      </button>
-                      {expandedMonths.has(month) && (
-                        <div className="divide-y divide-stone-50">
-                          {items.map((note) => (
-                            <div key={note.id} className="px-4 py-3">
-                              <div className="text-xs text-stone-400 mb-1">{note.date}</div>
-                              <div className="text-stone-700 whitespace-pre-wrap text-sm">{note.content}</div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))
-                )}
+              <div>
+                <h1 className="text-lg font-semibold text-[var(--text-primary)]">拾光·心流</h1>
+                <p className="text-xs text-[var(--text-tertiary)]">记录此刻的美好</p>
+              </div>
+            </div>
+            {todayHexagram && (
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-[var(--bg-tertiary)] rounded-full">
+                <span className="text-base">{todayHexagram.image}</span>
+                <span className="text-xs text-[var(--text-secondary)]">{todayHexagram.name}</span>
+              </div>
+            )}
+          </div>
+          
+          {/* 移动端卦象卡片 */}
+          {todayHexagram && (
+            <div className="sm:hidden flex items-center gap-2 px-3 py-2 bg-[var(--bg-tertiary)] rounded-lg">
+              <span className="text-xl">{todayHexagram.image}</span>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-medium text-[var(--text-primary)]">
+                  第 {todayHexagram.number} 卦 · {todayHexagram.name}
+                </div>
+                <div className="text-xs text-[var(--text-tertiary)] truncate">
+                  {todayHexagram.judgment}
+                </div>
               </div>
             </div>
           )}
-        </>
-      )}
+        </div>
+      </header>
 
-      {activeTab === 'summary' && <WeeklySummary />}
-      {activeTab === 'data' && <DataManager />}
-    </main>
+      {/* 主内容区 */}
+      <main className="max-w-2xl mx-auto px-4 py-6">
+        {/* 记录页 */}
+        {activeTab === 'record' && (
+          <div className="space-y-6 animate-fade-in">
+            <NoteEditor />
+            
+            {notes.length > 0 && (
+              <div className="bg-[var(--bg-secondary)] rounded-2xl shadow-[var(--shadow-sm)] border border-[var(--border)] overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
+                  <h2 className="text-base font-medium text-[var(--text-primary)]">过往拾光</h2>
+                  <div className="flex gap-1 bg-[var(--bg-tertiary)] rounded-lg p-0.5">
+                    <button
+                      onClick={() => setViewMode('week')}
+                      className={`px-3 py-1.5 text-xs rounded-md transition-all ${
+                        viewMode === 'week'
+                          ? 'bg-white text-[var(--text-primary)] shadow-sm'
+                          : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
+                      }`}
+                    >
+                      按周
+                    </button>
+                    <button
+                      onClick={() => setViewMode('month')}
+                      className={`px-3 py-1.5 text-xs rounded-md transition-all ${
+                        viewMode === 'month'
+                          ? 'bg-white text-[var(--text-primary)] shadow-sm'
+                          : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
+                      }`}
+                    >
+                      按月
+                    </button>
+                  </div>
+                </div>
+
+                <div className="divide-y divide-[var(--border)]">
+                  {viewMode === 'week' ? (
+                    weekNotes.map(([week, items]) => (
+                      <div key={week} className="group">
+                        <button
+                          onClick={() => toggleWeek(week)}
+                          className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-[var(--bg-tertiary)] transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`w-5 h-5 rounded-full bg-[var(--bg-tertiary)] flex items-center justify-center transition-transform ${
+                              expandedWeeks.has(week) ? 'rotate-90' : ''
+                            }`}>
+                              <ChevronRight className="w-3 h-3 text-[var(--text-tertiary)]" />
+                            </div>
+                            <div>
+                              <div className="text-sm font-medium text-[var(--text-primary)]">
+                                第 {getWeekNumber(week)} 周
+                              </div>
+                              <div className="text-xs text-[var(--text-tertiary)]">
+                                {formatWeekLabel(week)}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-xs text-[var(--text-tertiary)] bg-[var(--bg-tertiary)] px-2 py-1 rounded-full">
+                            {items.length} 条
+                          </div>
+                        </button>
+                        
+                        {expandedWeeks.has(week) && (
+                          <div className="bg-[var(--bg-tertiary)]/50">
+                            {items.map((note) => (
+                              <div key={note.id} className="px-4 py-3 border-t border-[var(--border)]">
+                                <div className="text-xs text-[var(--text-tertiary)] mb-1.5">
+                                  {note.date}
+                                </div>
+                                <div className="text-sm text-[var(--text-secondary)] whitespace-pre-wrap leading-relaxed">
+                                  {note.content}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    monthNotes.map(([month, items]) => (
+                      <div key={month} className="group">
+                        <button
+                          onClick={() => toggleMonth(month)}
+                          className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-[var(--bg-tertiary)] transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`w-5 h-5 rounded-full bg-[var(--bg-tertiary)] flex items-center justify-center transition-transform ${
+                              expandedMonths.has(month) ? 'rotate-90' : ''
+                            }`}>
+                              <ChevronRight className="w-3 h-3 text-[var(--text-tertiary)]" />
+                            </div>
+                            <div className="text-sm font-medium text-[var(--text-primary)]">
+                              {formatMonthLabel(month)}
+                            </div>
+                          </div>
+                          <div className="text-xs text-[var(--text-tertiary)] bg-[var(--bg-tertiary)] px-2 py-1 rounded-full">
+                            {items.length} 条
+                          </div>
+                        </button>
+                        
+                        {expandedMonths.has(month) && (
+                          <div className="bg-[var(--bg-tertiary)]/50">
+                            {items.map((note) => (
+                              <div key={note.id} className="px-4 py-3 border-t border-[var(--border)]">
+                                <div className="text-xs text-[var(--text-tertiary)] mb-1.5">
+                                  {note.date}
+                                </div>
+                                <div className="text-sm text-[var(--text-secondary)] whitespace-pre-wrap leading-relaxed">
+                                  {note.content}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 回顾页 */}
+        {activeTab === 'summary' && (
+          <div className="animate-fade-in">
+            <WeeklySummary />
+          </div>
+        )}
+
+        {/* 数据页 */}
+        {activeTab === 'data' && (
+          <div className="animate-fade-in">
+            <DataManager />
+          </div>
+        )}
+      </main>
+
+      {/* 底部导航栏 - 移动端优化 */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-[var(--bg-secondary)] border-t border-[var(--border)] safe-area-bottom sm:hidden">
+        <div className="flex items-center justify-around py-2">
+          {[
+            { id: 'record' as Tab, icon: Home, label: '记录' },
+            { id: 'summary' as Tab, icon: BarChart3, label: '回顾' },
+            { id: 'data' as Tab, icon: Database, label: '数据' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex flex-col items-center gap-1 px-6 py-2 rounded-xl transition-all ${
+                activeTab === tab.id
+                  ? 'text-[var(--accent)]'
+                  : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
+              }`}
+            >
+              <tab.icon className={`w-5 h-5 ${
+                activeTab === tab.id ? 'stroke-[2.5px]' : 'stroke-2'
+              }`} />
+              <span className="text-[10px] font-medium">{tab.label}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
+
+      {/* 桌面端标签页 */}
+      <nav className="hidden sm:flex fixed top-20 right-4 flex-col gap-2 bg-[var(--bg-secondary)] rounded-xl shadow-[var(--shadow-md)] border border-[var(--border)] p-1.5 z-40">
+        {[
+          { id: 'record' as Tab, icon: Home, label: '记录' },
+          { id: 'summary' as Tab, icon: BarChart3, label: '回顾' },
+          { id: 'data' as Tab, icon: Database, label: '数据' },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all ${
+              activeTab === tab.id
+                ? 'bg-[var(--accent)] text-white shadow-sm'
+                : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]'
+            }`}
+          >
+            <tab.icon className="w-4 h-4" />
+            <span className="text-xs font-medium">{tab.label}</span>
+          </button>
+        ))}
+      </nav>
+    </div>
   )
 }
 
